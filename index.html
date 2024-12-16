@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List with Calendar</title>
+    <!-- Link sa FullCalendar CSS para sa calendar styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.2.0/fullcalendar.min.css">
+    <!-- JQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Moment.js library para sa pag-handle sa dates -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <!-- FullCalendar JS library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.2.0/fullcalendar.min.js"></script>
+</head>
+<body>
+
+    <h1>To-Do List with Calendar</h1>
+
+    <!-- Calendar Container -->
+    <div id="calendar"></div>
+
+    <h3>Add a Task</h3>
+    <!-- Form para mag-add og task -->
+    <form id="taskForm">
+        <!-- Hidden field para sa selected date -->
+        <input type="hidden" name="task_date" id="task_date">
+        <label for="task_description">Task:</label>
+        <!-- Input field para sa task description -->
+        <input type="text" id="task_description" required>
+        <button type="submit">Add Task</button>
+    </form>
+
+    <h3>Tasks for Selected Date</h3>
+    <!-- Container para ipakita ang tasks sa selected date -->
+    <div id="tasks_today">
+        <!-- Tasks for selected date will appear here -->
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize ang calendar gamit ang FullCalendar
+            $('#calendar').fullCalendar({
+                selectable: true,  // Pwede mag-select og date
+                selectHelper: true,  // Magamit og helper nga functions
+                select: function(start, end, allDay) {
+                    // Pagkuha sa selected date gamit ang moment.js
+                    var selectedDate = moment(start).format('YYYY-MM-DD');
+                    // I-set ang hidden field para sa task date
+                    $('#task_date').val(selectedDate);
+                    // I-load ang mga tasks sa selected date
+                    loadTasks(selectedDate);
+                }
+            });
+
+            // Function para i-load ang tasks sa selected date
+            function loadTasks(date) {
+                $.ajax({
+                    url: 'get_tasks.php',  // PHP file para magkuha og tasks gikan sa database
+                    method: 'GET',
+                    data: { date: date },  // Pagpadala sa date parameter
+                    success: function(response) {
+                        // I-parse ang JSON response gikan sa server
+                        const tasks = JSON.parse(response);
+                        if (tasks.length > 0) {
+                            $('#tasks_today').html('');  // I-clear ang previous tasks
+                            // Loop aron ipakita ang mga tasks sa selected date
+                            tasks.forEach(function(task) {
+                                $('#tasks_today').append('<p>' + task + '</p>');  // Idugang ang task sa webpage
+                            });
+                        } else {
+                            // Kung walay tasks, ipakita ang mensahe
+                            $('#tasks_today').html('<p>No tasks for this date</p>');
+                        }
+                    }
+                });
+            }
+
+            // Function para mag-add og task sa selected date
+            $('#taskForm').submit(function(e) {
+                e.preventDefault();  // I-prevent ang page reload
+                var taskDescription = $('#task_description').val();  // Gikuha ang task description gikan sa form
+                var taskDate = $('#task_date').val();  // Gikuha ang selected date gikan sa hidden field
+
+                // AJAX request para i-add ang task sa database
+                $.ajax({
+                    url: 'add_task.php',  // PHP file nga mag-handle sa pag-add sa task
+                    method: 'POST',
+                    data: { task_description: taskDescription, task_date: taskDate },  // Ipadala ang task description ug date
+                    success: function(response) {
+                        alert(response);  // Ipakita ang response gikan sa server (success message)
+                        loadTasks(taskDate);  // I-load ang tasks balik para makita ang bagong task
+                        $('#task_description').val('');  // I-clear ang input field sa task description
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
